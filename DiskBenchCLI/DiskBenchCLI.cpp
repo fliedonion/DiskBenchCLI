@@ -4,7 +4,7 @@
 #include <atlstr.h>
 
 
-#define FORMAT_MESSAGE_BUFFER_SIZE 4096
+
 
 using namespace std;
 
@@ -13,9 +13,11 @@ static HANDLE hFile;
 
 
 
+const int kFormatMessageBufferSize = 4096;
 
-int write_test(TCHAR*, DWORD);
-int read_test(const TCHAR*);
+
+int WriteTest(TCHAR*, DWORD);
+int ReadTest(const TCHAR*);
 void print_error();
 
 std::ios_base::fmtflags init_flags(cout.flags());
@@ -44,21 +46,21 @@ int _tmain(int argc, _TCHAR* argv[])
 	_tcscpy_s(target_path, MAX_PATH, argv[1]);
 
 
-	TCHAR* target_dir_only;
+	TCHAR* target_dir_only_ptr;
 
 	TCHAR target_drive[_MAX_DRIVE];
 	TCHAR target_fname[_MAX_FNAME];
 	TCHAR target_fext[_MAX_EXT];
 
-	target_dir_only = new TCHAR[MAX_PATH];
+	target_dir_only_ptr = new TCHAR[MAX_PATH];
 
 	// wcout << target_path << endl;
 
-	if (_tsplitpath_s(target_path, target_drive, _MAX_DRIVE, target_dir_only, MAX_PATH, target_fname, _MAX_FNAME, target_fext, _MAX_EXT)) {
+	if (_tsplitpath_s(target_path, target_drive, _MAX_DRIVE, target_dir_only_ptr, MAX_PATH, target_fname, _MAX_FNAME, target_fext, _MAX_EXT)) {
 		wcerr << "ERROR: parsing target path. " << endl;
 		wcerr << "       please specify absolute path. " << endl;
 
-		delete[] target_dir_only;
+		delete[] target_dir_only_ptr;
 		return 1;
 	}
 
@@ -67,10 +69,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	// wcout << target_drive << target_dir_only << " " << target_fname << target_fext << endl;
 	// wcout << argv[1] << endl;
 
-	if (_tcsclen(target_dir_only) == 1) { // only null termination
+	if (_tcsclen(target_dir_only_ptr) == 1) { // only null termination
 		wcerr << "DON'T specify drive root folder as target directory." << endl;
 
-		delete[] target_dir_only;
+		delete[] target_dir_only_ptr;
 		return 1;
 	}
 
@@ -78,13 +80,13 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 	if (_tcsclen(target_drive) > 0) {
-		PathCombine(target_directory, target_drive, target_dir_only);
+		PathCombine(target_directory, target_drive, target_dir_only_ptr);
 	}
 	else {
-		_tcscpy_s(target_directory, MAX_PATH, target_dir_only);
+		_tcscpy_s(target_directory, MAX_PATH, target_dir_only_ptr);
 	}
 
-	delete[] target_dir_only;
+	delete[] target_dir_only_ptr;
 
 	wcout << "Target Directory is... " << target_directory << endl << endl;
 	if (!PathFileExists(target_directory) || !PathIsDirectory(target_directory)) {
@@ -99,7 +101,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		<< endl;
 
 
-	if (!write_test(target_path, CREATE_ALWAYS)) {
+	if (!WriteTest(target_path, CREATE_ALWAYS)) {
 		if (!DeleteFile(target_path)) {
 			print_error();
 		}
@@ -109,7 +111,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	wcout << "Interval 2sec." << endl;
 	Sleep(2000);
 
-	if (!write_test(target_path, OPEN_EXISTING)) {
+	if (!WriteTest(target_path, OPEN_EXISTING)) {
 		if (!DeleteFile(target_path)) {
 			print_error();
 		}
@@ -119,7 +121,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	wcout << "Interval 2sec." << endl;
 	Sleep(2000);
 
-	if (!read_test(target_path)) {
+	if (!ReadTest(target_path)) {
 		if (!DeleteFile(target_path)) {
 			print_error();
 		}
@@ -135,7 +137,7 @@ int _tmain(int argc, _TCHAR* argv[])
 }
 
 
-BOOL _write_test_core(TCHAR* target_path, DWORD dwCreationDisposition, int datasize_mb, char* buf, int bufsize) {
+BOOL _WriteTestCore(TCHAR* target_path, DWORD dwCreationDisposition, int datasize_mb, char* buf, int bufsize) {
 
 	// hFile = CreateFile(target_path, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
 	//    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
@@ -227,7 +229,7 @@ BOOL _write_test_core(TCHAR* target_path, DWORD dwCreationDisposition, int datas
 }
 
 
-BOOL write_test(TCHAR* target_path, DWORD dwCreationDisposition) {
+BOOL WriteTest(TCHAR* target_path, DWORD dwCreationDisposition) {
 	// WRITE TEST
 
 	int datasize_mb = 1024;
@@ -242,7 +244,7 @@ BOOL write_test(TCHAR* target_path, DWORD dwCreationDisposition) {
 	memset(buf, 0xFF, BufSize);
 
 
-	BOOL result = _write_test_core(target_path, dwCreationDisposition, datasize_mb, buf, BufSize);
+	BOOL result = _WriteTestCore(target_path, dwCreationDisposition, datasize_mb, buf, BufSize);
 
 	free(buf);
 	return result;
@@ -251,7 +253,7 @@ BOOL write_test(TCHAR* target_path, DWORD dwCreationDisposition) {
 
 
 
-BOOL _read_test_core(const TCHAR* const target_path, int datasize_mb, char* buf, int bufsize) {
+BOOL _ReadTestCore(const TCHAR* const target_path, int datasize_mb, char* buf, int bufsize) {
 
 
 	hFile = CreateFile(target_path,
@@ -327,7 +329,7 @@ BOOL _read_test_core(const TCHAR* const target_path, int datasize_mb, char* buf,
 }
 
 
-BOOL read_test(const TCHAR* const target_path) {
+BOOL ReadTest(const TCHAR* const target_path) {
 	// READ TEST
 
 	int datasize_mb = 1024;
@@ -342,7 +344,7 @@ BOOL read_test(const TCHAR* const target_path) {
 	memset(buf, 0x00, BufSize);
 
 
-	BOOL result = _read_test_core(target_path, datasize_mb, buf, BufSize);
+	BOOL result = _ReadTestCore(target_path, datasize_mb, buf, BufSize);
 
 	free(buf);
 	return result;
@@ -353,14 +355,14 @@ BOOL read_test(const TCHAR* const target_path) {
 void print_error()
 {
 	DWORD errorCode = GetLastError();
-	TCHAR szFormatBuffer[FORMAT_MESSAGE_BUFFER_SIZE];
+	TCHAR szFormatBuffer[kFormatMessageBufferSize];
 	FormatMessage(
 		FORMAT_MESSAGE_FROM_SYSTEM,
 		NULL,
 		errorCode,
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 		(LPTSTR)szFormatBuffer,
-		FORMAT_MESSAGE_BUFFER_SIZE,
+		kFormatMessageBufferSize,
 		NULL);
 
 	wcerr << "ERR-CODE: " << errorCode << endl;
