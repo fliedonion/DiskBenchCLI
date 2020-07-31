@@ -17,6 +17,7 @@ const int kFormatMessageBufferSize = 4096;
 
 
 int WriteTest(TCHAR*, DWORD);
+int WriteTest(TCHAR*, BOOL, DWORD);
 int ReadTest(const TCHAR*);
 void print_error();
 
@@ -101,7 +102,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		<< endl;
 
 
-	if (!WriteTest(target_path, CREATE_ALWAYS)) {
+	if (!WriteTest(target_path, FALSE, CREATE_ALWAYS)) {
 		if (!DeleteFile(target_path)) {
 			print_error();
 		}
@@ -111,7 +112,17 @@ int _tmain(int argc, _TCHAR* argv[])
 	wcout << "Interval 2sec." << endl;
 	Sleep(2000);
 
-	if (!WriteTest(target_path, OPEN_EXISTING)) {
+	if (!WriteTest(target_path, FALSE, OPEN_EXISTING)) {
+		if (!DeleteFile(target_path)) {
+			print_error();
+		}
+		return 1;
+	}
+
+	wcout << "Interval 2sec." << endl;
+	Sleep(2000);
+
+	if (!WriteTest(target_path, TRUE, OPEN_EXISTING)) {
 		if (!DeleteFile(target_path)) {
 			print_error();
 		}
@@ -137,7 +148,8 @@ int _tmain(int argc, _TCHAR* argv[])
 }
 
 
-BOOL _WriteTestCore(TCHAR* target_path, DWORD dwCreationDisposition, int datasize_mb, char* buf, int bufsize) {
+BOOL _WriteTestCore(TCHAR* target_path, DWORD dwCreationDisposition, 
+	BOOL random, int datasize_mb, char* buf, int bufsize) {
 
 	// hFile = CreateFile(target_path, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
 	//    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
@@ -180,9 +192,23 @@ BOOL _WriteTestCore(TCHAR* target_path, DWORD dwCreationDisposition, int datasiz
 	wcout << setw(7 + indent) << setfill(L' ') << "    0.0 %";
 	wcout << fixed << setprecision(1);
 
-
 	for (int i = 0; i < datasize_mb; i++)
 	{
+		if (random) {
+			if (i % 2 == 0) {
+				LONG j = i / 2;
+				j = j + (datasize_mb / 2);
+				// i, j => (0, 512), (2, 513), (4, 514)...   IF datasize_mb == 1024
+				SetFilePointer(hFile, j * 1024 * 1024, NULL, FILE_BEGIN);
+			}
+			else {
+				LONG j = (i - 1) / 2;//
+				// i, j => (1, 0), (3, 1), (5, 2)...
+				SetFilePointer(hFile, j * 1024 * 1024, NULL, FILE_BEGIN);
+			}
+		}
+
+
 		if (WriteFile(hFile, buf, bufsize, &writtenBytes, NULL))
 		{
 			if (i % 100 == 0) {
@@ -229,7 +255,7 @@ BOOL _WriteTestCore(TCHAR* target_path, DWORD dwCreationDisposition, int datasiz
 }
 
 
-BOOL WriteTest(TCHAR* target_path, DWORD dwCreationDisposition) {
+BOOL WriteTest(TCHAR* target_path, BOOL random, DWORD dwCreationDisposition) {
 	// WRITE TEST
 
 	int datasize_mb = 1024;
@@ -244,7 +270,7 @@ BOOL WriteTest(TCHAR* target_path, DWORD dwCreationDisposition) {
 	memset(buf, 0xFF, BufSize);
 
 
-	BOOL result = _WriteTestCore(target_path, dwCreationDisposition, datasize_mb, buf, BufSize);
+	BOOL result = _WriteTestCore(target_path, dwCreationDisposition, random, datasize_mb, buf, BufSize);
 
 	free(buf);
 	return result;
